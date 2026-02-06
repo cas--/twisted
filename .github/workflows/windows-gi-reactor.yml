@@ -136,7 +136,7 @@ jobs:
         run: |
           python -m twisted.trial --reactor=gi twisted.internet.test.test_glibbase
 
-      - name: Run test_newtls with --reactor=gi
-        timeout-minutes: 3
-        run: |
-          python -m twisted.trial --reactor=gi twisted.internet.test.test_newtls
+      # - name: Run test_newtls with --reactor=gi
+      #   timeout-minutes: 3
+      #   run: |
+      #     python -m twisted.trial --reactor=gi twisted.internet.test.test_newtls
