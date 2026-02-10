@@ -35,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: '3.14'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -50,7 +50,7 @@ jobs:
           7z x gtk.zip -o$GTK_ROOT
         env:
           # See https://github.com/wingtk/gvsbuild/releases
-          GVSBUILD_VERSION: 2025.9.0  # Python 3.13, pycairo 1.28.0, pygobject 3.54.0
+          GVSBUILD_VERSION: 2026.1.0  # Python 3.14, pycairo 1.29.0, pygobject 3.54.5
 
       - name: Set GTK environment
         shell: bash
@@ -61,7 +61,7 @@ jobs:
           echo "INCLUDE=$GTK_ROOT/include" >> $GITHUB_ENV
           # Force UV to use the gvsbuild wheels instead of PyPI
           echo "UV_FIND_LINKS=$GTK_ROOT/wheels" >> $GITHUB_ENV
-          printf 'pycairo==1.28.0\npygobject==3.54.0\n' > $GTK_ROOT/constraints.txt
+          printf 'pycairo==1.29.0\npygobject==3.54.5\n' > $GTK_ROOT/constraints.txt
           echo "UV_CONSTRAINT=$GTK_ROOT/constraints.txt" >> $GITHUB_ENV
 
       - name: Install Twisted
