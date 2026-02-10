@@ -245,6 +245,36 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         log.callWithLogger(source, self._doReadOrWrite, source, source, condition)
         return True  # True = don't auto-remove the source
 
+    if platform.isWindows():
+
+        def _doReadOrWrite(self, selectable, fd, event):
+            """
+            Override for Windows to check SO_ERROR before reading.
+
+            On Windows, select() and GLib both report connection errors
+            (RST/refused) as readable, but recv() returns EOF instead of
+            raising an exception.  This causes Twisted to see ConnectionDone
+            instead of ConnectionLost.  We check SO_ERROR before doRead() to
+            detect the error and route it through the normal disconnect path.
+            """
+            if event & self._POLL_IN:
+                try:
+                    sock = getattr(selectable, "socket", None)
+                    if sock:
+                        error_code = sock.getsockopt(
+                            _socket.SOL_SOCKET, _socket.SO_ERROR
+                        )
+                        if error_code != 0:
+                            import os as _os
+
+                            exc = OSError(error_code, _os.strerror(error_code))
+                            exc.errno = error_code
+                            self._disconnectSelectable(selectable, exc, True)
+                            return
+                except Exception:
+                    pass
+            super()._doReadOrWrite(selectable, fd, event)
+
     def _add(self, source, primary, other, primaryFlag, otherFlag):
         """
         Add the given L{FileDescriptor} for monitoring either for reading or
