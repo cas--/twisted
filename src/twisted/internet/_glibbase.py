@@ -12,6 +12,7 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
 import select as _select
+import socket as _socket
 import sys
 import time
 from typing import Any, Callable, Dict, Set
@@ -326,6 +327,36 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         for fd in readable:
             reader = fd_to_reader.get(fd)
             if reader and reader in self._reads:
+                # On Windows, select() reports both clean shutdown (FIN) and
+                # connection errors (RST/refused) as "readable", but recv() returns
+                # EOF (0 bytes) for both without distinguishing them. Check SO_ERROR
+                # to detect and handle error conditions explicitly.
+                try:
+                    sock = getattr(reader, "socket", None)
+                    if sock:
+                        error_code = sock.getsockopt(
+                            _socket.SOL_SOCKET, _socket.SO_ERROR
+                        )
+                        if error_code != 0:
+                            # getsockopt(SO_ERROR) clears the error, so we must handle
+                            # it now. Create the exception that recv() should have raised.
+                            # Windows codes: 10053=ABORTED, 10054=RESET, 10061=REFUSED
+                            # Create OSError matching what recv() would have raised.
+                            # OSError(errno, message) format is what Twisted expects.
+                            import os as _os
+
+                            from twisted.python.failure import Failure
+
+                            exc = OSError(error_code, _os.strerror(error_code))
+                            exc.errno = error_code
+
+                            if hasattr(reader, "connectionLost"):
+                                reader.connectionLost(Failure(exc))
+                                continue  # Skip doRead() - error already handled
+                except Exception:
+                    # If error checking fails, fall back to normal dispatch
+                    pass
+
                 self._doReadOrWrite(reader, reader, self._POLL_IN)
         for fd in writable:
             writer = fd_to_writer.get(fd)
