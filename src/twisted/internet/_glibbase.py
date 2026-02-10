@@ -169,7 +169,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # it uses select() to find ready fds and dispatches them directly.
             # See https://github.com/twisted/twisted/issues/11987
             self._lastIOEvent = time.monotonic()
-            # self._timeout_add(200, self._glibWindowsPoll)
+            self._timeout_add(200, self._glibWindowsPoll)
 
         self.context = self._glib.main_context_default()
         self._pending = self.context.pending
